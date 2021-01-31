@@ -1,2 +1,2 @@
-# crypto_prediction
-Script to predict price of selected crypto in specified period of time.
+# Cryptocurrencies predictions
+Script to predict price of selected crypto in specified period of time. Based on Neural Network.

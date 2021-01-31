@@ -16,7 +16,7 @@ from sklearn.preprocessing import MinMaxScaler
 # from keras.models import Sequential
 # from keras.layers import Dense, LSTM
 import pandas_datareader.data as web
-plt.style.use("fivethirtyeight")
+plt.style.use('dark_background')
 import json
 import requests
 
@@ -42,8 +42,20 @@ index_of_mid = html_page.index("mid")
 
 usd_price = float(html_page[index_of_mid+5:index_of_mid+11])
 
-
 df[["Adj Close", "High", "Low", "Open", "Close", "Volume"]] *= usd_price #convert USD to PLN
+
+
+#visualise the closing price history of XRP
+
+plt.figure(figsize=(16,8))
+plt.title("Closing Price History")
+plt.plot(df['Close'])
+
+plt.xlabel("Date", fontsize=18)
+plt.ylabel("Close Price Size PLN zł", fontsize=18)
+
+plt.show()
+
 
 
 

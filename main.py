@@ -15,79 +15,138 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-# from keras.models import Sequential
-# from keras.layers import Dense, LSTM
+from keras.models import Sequential
+from keras.layers import Dense, LSTM
 import pandas_datareader.data as web
 plt.style.use('dark_background')
-import json
-import requests
-
-#usd_price = 0
-
-global df #Data frame of currency price
-
-
-
-def change_PLN(dataframe): #function that change USD to PLN in dataframe
-    url = 'http://api.nbp.pl/api/exchangerates/rates/A/USD/' #API NBP
-    res = requests.get(url)
-    html_page = str(res.content)
-    #Converting data to obtain pure float number
-    index_of_mid = html_page.index("mid")
-    usd_price = float(html_page[index_of_mid+5:index_of_mid+11])
-    dataframe *= usd_price
 
 
 
 
-def generate_full_history():
-    global df
-    #set start and end of the market chart
-    end = datetime.today()
-    #start = datetime(end.year-15,end.month,end.day)
-    start=datetime(2000, 1, 1) #max time period
-    #downloading market chart from start to end for XRP-USD
-    df = web.DataReader('XRP-USD', 'yahoo', start, end)
-    #downloading actual price of USD to PLN from NBP site
-    change_PLN(df[["Adj Close", "High", "Low", "Open", "Close", "Volume"]])
+
+class CurrencyData:
+    def __init__(self, currency):
+        
+        self.currency = currency
+    
+    
+    
+    
     
 
-
-
-generate_full_history() #generating full history of XRP closing prices in PLN
-
-
-def vis_data(title, data, xlabel, ylabel):#visualise the closing price history of XRP
-    plt.figure(figsize=(16,8))
-    plt.title(title)
-    plt.plot(data)
-    plt.xlabel(xlabel, fontsize=18)
-    plt.ylabel(ylabel, fontsize=18)
-    plt.show()
-
-def make_predict(start, end):
-       
-    start1 = np.datetime64(start) #converting string like 'YYYY-MM-DD' to datetime format
-    end1 = np.datetime64(end)
-    data_test = web.DataReader('XRP-USD', 'yahoo', start1, end1)
-    close_test = data_test.filter(["Close"])
-    change_PLN(close_test)
-    print(close_test)
-
-
-
-vis_data("Closing Price History of XRP", df["Close"], "Date", "Closing price [PLN]" ) #vis_data(title, data, xlabel, ylabel)
     
-make_predict('2015-02-25','2021-01-31') #taking selected interval of data from with header Close and changing it to PLN values, instead of random typing testing interval
+
+    def generate_full_history(self):
+        global df
+        global close_set
+        global close
+        #set start and end of the market chart
+        end = datetime.today()
+        #start = datetime(end.year-15,end.month,end.day)
+        start=datetime(2000, 1, 1) #max time period
+        
+        #downloading market chart from start to end for XRP-USD
+        df = web.DataReader(self.currency, 'yahoo', start, end)
+        
+        #New dataframe with only Close column
+        close = df.filter(["Close"]) #choose only one column
+        close_set = close.values
+        
+
+
+
+    def vis_data(self, data):#visualise the closing price history of XRP
+        title = "Closing Price History of %s" % self.currency[0:3]
+        xlabel = "Date"
+        ylabel =  "Closing price [%s]" % self.currency[4:6]
+        
+        plt.figure(figsize=(16,8))
+        plt.title(title)
+        plt.plot(data)
+        plt.xlabel(xlabel, fontsize=18)
+        plt.ylabel(ylabel, fontsize=18)
+        plt.show()
+
+
+    def make_predict(self, start):
+        global close_test
+        global close_train
+        start1 = np.datetime64(start) #converting string like 'YYYY-MM-DD' to datetime format
+        data_test = web.DataReader(self.currency, 'yahoo', start1, datetime.today())
+        close_test = data_test.filter(["Close"])
+        
+        data_train = web.DataReader(self.currency,'yahoo', datetime(2000, 1, 1), start1 ) #Create data for training from 0 to start1, which is start of close_test
+        close_train = data_train.filter(["Close"])
+        
+        print(close_test)
+        print(close_train)
+
+
+    
+        
+
+        
+
+    def create_train_data(self):
+        global x_train, y_train
+        #Scaling data
+        scaler = MinMaxScaler(feature_range=(0,1))
+
+        #Create the training data set
+        scaled_close_train = scaler.fit_transform(close_train)
+        print(scaled_close_train)
+        
+        #Split the data into x and y _train sets
+        x_train = []
+        y_train = []
+
+        for i in range(60, len(scaled_close_train)):
+            x_train.append(scaled_close_train[i-60:i, 0])
+            y_train.append(scaled_close_train[i, 0])
+            if i<=60:
+                print(x_train)
+                print(y_train)
+                print()
+                
+    def convert_xy(self):
+        global x_train, y_train
+        
+        #Converting the x,y_train to numpy arrays
+        x_train, y_train = np.array(x_train), np.array(y_train)
+
+        #Reshape the data because LSTM needs 3-dimensional data set
+        x_train =np.reshape (x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+        
+    def lstm_model(self):
+        #building lstm neural model
+        model = Sequential()
+        model.add(LSTM(50, return_sequences=True))
+
+
+
+         
+
+        
+    
+
+xrp = CurrencyData('XRP-USD') #currency must be 'ABC-DEF' where ABC - crypto currency and DEF - fiat currency
+  
+xrp.generate_full_history()
+xrp.make_predict('2017-02-25') #taking selected interval from start to today of data from with header Close instead of random typing testing interval
+xrp.vis_data(close) #vis_data(dataframe)
+xrp.create_train_data()
+xrp.convert_xy()
+xrp.lstm_model()
 
 
 
 
 
 
-# #New dataframe with only Close column
-# close = df.filter(["Close"]) #choose only one column
-# close_set = close.values
+
+
+
 
 
 
